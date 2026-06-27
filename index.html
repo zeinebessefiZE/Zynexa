@@ -1,492 +1,568 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-<meta name="google-site-verification" content="mlNuAJqIu2dkcVOorgQtjThu5pPtoparjBa_lC_Jiek" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zynexa</title>
+<title>ZAYNEXA · Air Piano</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#000;overflow:hidden;font-family:'Courier New',monospace;height:100vh;width:100vw}
-  #container{position:relative;width:100vw;height:100vh}
-  #video{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-  #overlay{position:absolute;top:0;left:0;width:100%;height:100%}
-  #scanlines{
-    position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;
-    background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.13) 3px,rgba(0,0,0,0.13) 4px)
-  }
-  #vignette{
-    position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:11;
-    background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,12,0.88) 100%)
-  }
-  #ui{
-    position:absolute;top:20px;left:50%;transform:translateX(-50%);
-    color:rgba(0,245,255,0.9);font-size:11px;letter-spacing:8px;text-transform:uppercase;
-    text-shadow:0 0 20px #00f5ff,0 0 40px #00f5ff88;pointer-events:none;z-index:20;white-space:nowrap;
-    animation:flicker 7s infinite
-  }
-  #status{
-    position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
-    color:rgba(255,0,229,0.7);font-size:10px;letter-spacing:4px;
-    text-shadow:0 0 12px #ff00e5;pointer-events:none;z-index:20
-  }
-  #fps{position:absolute;top:20px;right:22px;color:rgba(0,255,136,0.45);font-size:9px;letter-spacing:2px;pointer-events:none;z-index:20}
-  #insta{
-    position:absolute;bottom:24px;right:22px;
-    color:rgba(0,245,255,0.6);font-size:10px;letter-spacing:3px;
-    text-shadow:0 0 10px #00f5ff;pointer-events:none;z-index:20
-  }
-  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:30}
-  #lt{color:cyan;font-size:13px;letter-spacing:5px;text-shadow:0 0 24px cyan;animation:pulse 1.4s ease-in-out infinite}
-  #lb-wrap{margin-top:14px;width:180px;height:1px;background:rgba(0,245,255,0.15);overflow:hidden}
-  #lb{height:100%;width:0%;background:linear-gradient(90deg,#00f5ff,#ff00e5);box-shadow:0 0 8px cyan;transition:width .3s}
-  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-  @keyframes flicker{0%,100%{opacity:1}91%{opacity:1}92%{opacity:.5}94%{opacity:1}96%{opacity:.7}98%{opacity:1}}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04030d;
+  --surface:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.08);
+  --text:rgba(255,255,255,0.82);
+  --muted:rgba(255,255,255,0.3);
+  --dim:rgba(255,255,255,0.12);
+  --accent:#7c5cfc;
+  --font:'SF Pro Display','Helvetica Neue',system-ui,sans-serif;
+  --mono:'SF Mono','Fira Code',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased}
+
+/* CANVAS */
+#bgc{position:fixed;inset:0;width:100%;height:100%}
+#hoc{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* HEADER */
+#hdr{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 28px;
+  background:rgba(4,3,13,0.7);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);
+}
+.logo{font-size:12px;font-weight:600;letter-spacing:7px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.logo-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pdot 2s ease-in-out infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+
+#lang-group{display:flex;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:3px}
+.lang-btn{padding:5px 14px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;border-radius:100px;cursor:pointer;transition:all .2s}
+.lang-btn.active{background:rgba(255,255,255,0.1);color:#fff}
+.lang-btn:hover:not(.active){color:rgba(255,255,255,.6)}
+
+#metrics{display:flex;align-items:center;gap:20px}
+.metric{display:flex;flex-direction:column;align-items:flex-end}
+.metric-val{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
+.metric-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.mdiv{width:1px;height:28px;background:var(--border)}
+
+/* STATUS */
+#sbar{
+  position:fixed;top:72px;left:50%;transform:translateX(-50%);
+  z-index:40;background:var(--surface);border:1px solid var(--border);
+  border-radius:100px;padding:7px 18px;
+  display:flex;align-items:center;gap:9px;
+  backdrop-filter:blur(16px);white-space:nowrap;
+  transition:opacity .3s;
+}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sdot.green{background:#3ddc84;box-shadow:0 0 8px #3ddc84}
+.sdot.amber{background:#ffb347;box-shadow:0 0 8px #ffb347}
+#stxt{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+
+/* NOTE SPLASH */
+#nsplash{
+  position:fixed;bottom:268px;left:50%;transform:translateX(-50%);
+  z-index:60;text-align:center;pointer-events:none;
+}
+.nname{font-size:44px;font-weight:700;letter-spacing:-1px;line-height:1;opacity:0;transform:translateY(8px) scale(.9);transition:opacity .08s,transform .08s}
+.nname.show{opacity:1;transform:translateY(0) scale(1)}
+.nfreq{font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--muted);margin-top:4px;opacity:0;transition:opacity .1s}
+.nfreq.show{opacity:1}
+
+/* PIANO SHELL */
+#pshell{position:fixed;bottom:0;left:0;right:0;z-index:30}
+#pfog{height:110px;background:linear-gradient(to bottom,transparent,rgba(4,3,13,.65));pointer-events:none}
+#ppanel{
+  background:rgba(8,6,22,.97);
+  border-top:1px solid var(--border);
+  backdrop-filter:blur(40px);
+  padding:14px 0 24px;
+}
+#pheader{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px 12px;border-bottom:1px solid var(--border);margin-bottom:12px;
+}
+.pbrand{font-size:9px;letter-spacing:5px;text-transform:uppercase;color:var(--dim)}
+.pmode{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
+.mind{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+
+#krow{display:flex;align-items:flex-end;justify-content:center;padding:0 20px;gap:3px;height:158px;position:relative}
+
+/* KEYS */
+.pkey{
+  position:relative;flex-shrink:0;
+  border-radius:0 0 8px 8px;
+  cursor:pointer;user-select:none;
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:9px;
+  font-family:var(--mono);font-size:7.5px;letter-spacing:.5px;font-weight:500;
+  transition:transform .06s,filter .06s;
+}
+.pkey::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.07) 0%,transparent 40%);border-radius:inherit;pointer-events:none}
+.pkey.white{
+  width:48px;height:146px;
+  background:linear-gradient(180deg,#ede8ff 0%,#fdfcff 55%,#f5f2ff 100%);
+  color:rgba(60,40,110,.4);
+  border:1px solid rgba(180,160,230,.3);
+  box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 -4px 8px rgba(0,0,0,.1),inset 0 1px 0 rgba(255,255,255,.8);
+}
+.pkey.black{
+  width:30px;height:90px;
+  background:linear-gradient(180deg,#1a1030 0%,#2a1d50 70%,#1a1030 100%);
+  color:rgba(255,255,255,.22);
+  border:1px solid rgba(100,70,180,.25);
+  border-top:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.9),inset 0 -3px 6px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);
+  z-index:2;margin:0 -6px;align-self:flex-start;font-size:7px;padding-bottom:7px;
+}
+.pkey.white:active,.pkey.white.act{transform:translateY(3px);box-shadow:0 3px 10px rgba(0,0,0,.4),inset 0 -2px 4px rgba(0,0,0,.08)}
+.pkey.black:active,.pkey.black.act{transform:translateY(3px)}
+
+/* Per-note glow colors */
+.pkey[data-n="C4"].act  {background:#ff2d82!important;box-shadow:0 0 36px rgba(255,45,130,.85),0 0 70px rgba(255,45,130,.25)!important;color:#fff!important}
+.pkey[data-n="Cs4"].act {background:#c864ff!important;box-shadow:0 0 28px rgba(200,100,255,.8)!important;color:#fff!important}
+.pkey[data-n="D4"].act  {background:#ff7a00!important;box-shadow:0 0 36px rgba(255,122,0,.85),0 0 70px rgba(255,122,0,.25)!important;color:#fff!important}
+.pkey[data-n="Ds4"].act {background:#c864ff!important;box-shadow:0 0 28px rgba(200,100,255,.8)!important;color:#fff!important}
+.pkey[data-n="E4"].act  {background:#00d46a!important;box-shadow:0 0 36px rgba(0,212,106,.85),0 0 70px rgba(0,212,106,.25)!important;color:#fff!important}
+.pkey[data-n="F4"].act  {background:#007aff!important;box-shadow:0 0 36px rgba(0,122,255,.85),0 0 70px rgba(0,122,255,.25)!important;color:#fff!important}
+.pkey[data-n="Fs4"].act {background:#c864ff!important;box-shadow:0 0 28px rgba(200,100,255,.8)!important;color:#fff!important}
+.pkey[data-n="G4"].act  {background:#a020f0!important;box-shadow:0 0 36px rgba(160,32,240,.85),0 0 70px rgba(160,32,240,.25)!important;color:#fff!important}
+.pkey[data-n="Gs4"].act {background:#c864ff!important;box-shadow:0 0 28px rgba(200,100,255,.8)!important;color:#fff!important}
+.pkey[data-n="A4"].act  {background:#ffc400!important;box-shadow:0 0 36px rgba(255,196,0,.85),0 0 70px rgba(255,196,0,.25)!important;color:#1a1200!important}
+.pkey[data-n="As4"].act {background:#c864ff!important;box-shadow:0 0 28px rgba(200,100,255,.8)!important;color:#fff!important}
+.pkey[data-n="B4"].act  {background:#ff3b30!important;box-shadow:0 0 36px rgba(255,59,48,.85),0 0 70px rgba(255,59,48,.25)!important;color:#fff!important}
+.pkey[data-n="C5"].act  {background:#5ac8fa!important;box-shadow:0 0 36px rgba(90,200,250,.85),0 0 70px rgba(90,200,250,.25)!important;color:#001f2e!important}
+
+.pkey.primed.white{background:linear-gradient(180deg,#f0ebff 0%,#fff 100%)!important;outline:2px solid rgba(255,255,255,.45);outline-offset:-2px}
+.pkey.primed.black{background:linear-gradient(180deg,#2d2060 0%,#3d2a70 100%)!important;outline:2px solid rgba(255,255,255,.3);outline-offset:-2px}
+
+/* KB hints */
+#kbhints{display:flex;justify-content:center;gap:3px;padding:8px 20px 0;opacity:.3}
+.kbh{width:48px;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted);flex-shrink:0}
+.kbh.bh{width:30px;margin:0 -6px;font-size:7px}
+
+/* VISUALIZER */
+#viz{
+  position:fixed;bottom:256px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:flex-end;gap:2px;height:56px;
+  pointer-events:none;z-index:25;opacity:0;transition:opacity .3s;
+}
+#viz.on{opacity:1}
+.vb{width:3px;border-radius:2px;background:var(--accent);min-height:2px;transition:height .04s}
+
+/* CAM STATUS badge */
+#cmbadge{
+  position:fixed;bottom:220px;right:20px;z-index:40;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);display:flex;align-items:center;gap:7px;
+}
 </style>
 </head>
 <body>
-<div id="container">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="overlay"></canvas>
-  <div id="scanlines"></div>
-  <div id="vignette"></div>
-  <div id="ui">✦ &nbsp; Z Y N E X A &nbsp; ✦</div>
-  <div id="status">INITIALIZING…</div>
-  <div id="fps">-- FPS</div>
-  <div id="insta">@zaynebcodes</div>
-  <div id="loading">
-    <div id="lt">LOADING HAND TRACKING…</div>
-    <div id="lb-wrap"><div id="lb"></div></div>
+
+<canvas id="bgc"></canvas>
+<canvas id="hoc"></canvas>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="logo"><div class="logo-dot"></div>ZAYNEXA</div>
+  <div id="lang-group">
+    <button class="lang-btn active" onclick="setLang('ar')">AR</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('fr')">FR</button>
+  </div>
+  <div id="metrics">
+    <div class="metric">
+      <div class="metric-val" id="mnotes">0</div>
+      <div class="metric-lbl" id="lnotes">نغمات</div>
+    </div>
+    <div class="mdiv"></div>
+    <div class="metric">
+      <div class="metric-val" id="mtime">0:00</div>
+      <div class="metric-lbl" id="ltime">وقت</div>
+    </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<!-- STATUS -->
+<div id="sbar">
+  <div class="sdot amber" id="sdot"></div>
+  <div id="stxt">جاهز</div>
+</div>
+
+<!-- NOTE SPLASH -->
+<div id="nsplash">
+  <div class="nname" id="nname"></div>
+  <div class="nfreq" id="nfreq"></div>
+</div>
+
+<!-- VISUALIZER -->
+<div id="viz"></div>
+
+<!-- PIANO -->
+<div id="pshell">
+  <div id="pfog"></div>
+  <div id="ppanel">
+    <div id="pheader">
+      <div class="pbrand" id="pbrand">— Z A Y N E X A  A I R  P I A N O —</div>
+      <div class="pmode"><div class="mind"></div><span id="modespan">لوحة مفاتيح</span></div>
+    </div>
+    <div id="krow"></div>
+    <div id="kbhints"></div>
+  </div>
+</div>
+
+<!-- CAM BADGE -->
+<div id="cmbadge">
+  <div class="sdot amber" id="cambdot"></div>
+  <span id="cambtxt">كاميرا: تحميل…</span>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
 <script>
-// ══════════════════════════════════════
-// CONFIG
-// ══════════════════════════════════════
-const TIP_IDS     = [4,8,12,16,20];
-const JOINT_R     = 3.5;
-const MAX_DIST    = 800;
-const LERP_S      = 0.2;
-const TRAIL_LEN   = 24;
-const TOUCH_PX    = 34;
-const TOUCH_CD    = 260;
+// ── TRANSLATIONS ──────────────────────────────────────────────
+const T = {
+  ar:{ notes:'نغمات', time:'وقت', showHand:'حرّك إصبعك فوق المفاتيح', noHand:'أظهر يدك', ready:'العب بالمفاتيح أو بالكاميرا', kb:'لوحة مفاتيح', air:'تتبع هوائي', camLoad:'كاميرا: تحميل…', camOk:'كاميرا: نشطة ✓', camFail:'كاميرا: غير متاحة' },
+  en:{ notes:'Notes',   time:'Time',  showHand:'Move finger over keys',       noHand:'Show your hand', ready:'Play keys or use camera', kb:'Keyboard', air:'Air tracking', camLoad:'Camera: loading…', camOk:'Camera: active ✓', camFail:'Camera: unavailable' },
+  fr:{ notes:'Notes',   time:'Temps', showHand:'Bougez le doigt sur les touches', noHand:'Montrez votre main', ready:'Jouez au clavier ou utilisez la caméra', kb:'Clavier', air:'Suivi aérien', camLoad:'Caméra: chargement…', camOk:'Caméra: active ✓', camFail:'Caméra: indisponible' },
+};
+let lang='ar', noteCount=0, startTime=null, cameraOk=false, anyHand=false;
 
-// Per-finger laser colors [core, glow]
-const F_COLORS = [
-  ['#ff00e5','#8800ff'],   // thumb   — magenta / violet
-  ['#00f5ff','#0055ff'],   // index   — cyan / blue
-  ['#00ffaa','#00ff44'],   // middle  — aqua / green
-  ['#ffe600','#ff8800'],   // ring    — yellow / orange
-  ['#ff3366','#ff00e5'],   // pinky   — rose / magenta
-];
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase()===l));
+  document.getElementById('lnotes').textContent = T[l].notes;
+  document.getElementById('ltime').textContent  = T[l].time;
+  refreshStatus();
+}
 
-const JOINT_PAL = ['#00f5ff','#ff00e5','#ffe600','#00ff88','#ff7700','#8800ff','#ff3366'];
+function refreshStatus(){
+  const sdot = document.getElementById('sdot');
+  const stxt = document.getElementById('stxt');
+  if(cameraOk && anyHand){
+    sdot.className='sdot green'; stxt.textContent=T[lang].showHand;
+  } else if(cameraOk){
+    sdot.className='sdot amber'; stxt.textContent=T[lang].noHand;
+  } else {
+    sdot.className='sdot amber'; stxt.textContent=T[lang].ready;
+  }
+  document.getElementById('modespan').textContent = cameraOk ? T[lang].air : T[lang].kb;
+}
+setLang('ar');
 
-const EDGES = [
-  [0,1],[1,2],[2,3],[3,4],
-  [0,5],[5,6],[6,7],[7,8],
-  [5,9],[9,10],[10,11],[11,12],
-  [9,13],[13,14],[14,15],[15,16],
-  [13,17],[17,18],[18,19],[19,20],[0,17]
-];
-
-// ══════════════════════════════════════
-// DOM
-// ══════════════════════════════════════
-const video   = document.getElementById('video');
-const canvas  = document.getElementById('overlay');
-const ctx     = canvas.getContext('2d');
-const statusEl= document.getElementById('status');
-const fpsEl   = document.getElementById('fps');
-const loadEl  = document.getElementById('loading');
-const lb      = document.getElementById('lb');
-
+// ── CANVAS ────────────────────────────────────────────────────
+const bgc=document.getElementById('bgc'), bgx=bgc.getContext('2d');
+const hoc=document.getElementById('hoc'), hx=hoc.getContext('2d');
 let W=0,H=0;
-function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+function resize(){W=bgc.width=hoc.width=innerWidth;H=bgc.height=hoc.height=innerHeight;}
 window.addEventListener('resize',resize); resize();
 
-// ══════════════════════════════════════
-// STATE
-// ══════════════════════════════════════
-let hData={};
-const particles=[], rings=[];
-let lastTouch=new Array(5).fill(0);
-const strPts=Array.from({length:5},()=>({lx:null,ly:null,rx:null,ry:null,vx:0,vy:0}));
-// Physics spring state per endpoint
-const springs=Array.from({length:5},()=>({
-  lx:0,ly:0,lvx:0,lvy:0,
-  rx:0,ry:0,rvx:0,rvy:0,
-  init:false
-}));
-const trails={L:Array.from({length:5},()=>[]),R:Array.from({length:5},()=>[])};
-let fpsF=0,fpsT=performance.now();
+// ── STARS ─────────────────────────────────────────────────────
+let stars=[];
+function buildStars(){stars=Array.from({length:110},()=>({x:Math.random()*W,y:Math.random()*H,r:.2+Math.random()*1.1,a:.05+Math.random()*.4,t:Math.random()*Math.PI*2,s:.001+Math.random()*.002}));}
+buildStars(); window.addEventListener('resize',buildStars);
 
-// Nebula clouds
-const nebulae=Array.from({length:6},()=>({
-  x:Math.random()*1920,y:Math.random()*1080,
-  r:180+Math.random()*200,
-  color:['#00f5ff','#ff00e5','#8800ff','#ff3366','#ffe600','#00ffaa'][Math.floor(Math.random()*6)],
-  phase:Math.random()*Math.PI*2,
-  spd:0.0003+Math.random()*0.0004
-}));
+// ── KEY DEFINITIONS ───────────────────────────────────────────
+const KEYS=[
+  {n:'C4',  lbl:'DO',   t:'white',freq:261.63,c:'#ff2d82'},
+  {n:'Cs4', lbl:'C#',   t:'black',freq:277.18,c:'#c864ff'},
+  {n:'D4',  lbl:'RE',   t:'white',freq:293.66,c:'#ff7a00'},
+  {n:'Ds4', lbl:'D#',   t:'black',freq:311.13,c:'#c864ff'},
+  {n:'E4',  lbl:'MI',   t:'white',freq:329.63,c:'#00d46a'},
+  {n:'F4',  lbl:'FA',   t:'white',freq:349.23,c:'#007aff'},
+  {n:'Fs4', lbl:'F#',   t:'black',freq:369.99,c:'#c864ff'},
+  {n:'G4',  lbl:'SOL',  t:'white',freq:392.00,c:'#a020f0'},
+  {n:'Gs4', lbl:'G#',   t:'black',freq:415.30,c:'#c864ff'},
+  {n:'A4',  lbl:'LA',   t:'white',freq:440.00,c:'#ffc400'},
+  {n:'As4', lbl:'A#',   t:'black',freq:466.16,c:'#c864ff'},
+  {n:'B4',  lbl:'SI',   t:'white',freq:493.88,c:'#ff3b30'},
+  {n:'C5',  lbl:'DO²',  t:'white',freq:523.25,c:'#5ac8fa'},
+];
+const KB={a:'C4',w:'Cs4',s:'D4',e:'Ds4',d:'E4',f:'F4',t:'Fs4',g:'G4',y:'Gs4',h:'A4',u:'As4',j:'B4',k:'C5'};
+const KBL={C4:'A',Cs4:'W',D4:'S',Ds4:'E',E4:'D',F4:'F',Fs4:'T',G4:'G',Gs4:'Y',A4:'H',As4:'U',B4:'J',C5:'K'};
 
-// ══════════════════════════════════════
-// MEDIAPIPE
-// ══════════════════════════════════════
-const hModel=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-hModel.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:0.72,minTrackingConfidence:0.55});
-hModel.onResults(r=>{
-  hData={};
-  if(r.multiHandLandmarks&&r.multiHandedness)
-    r.multiHandedness.forEach((h,i)=>{ hData[h.label]=r.multiHandLandmarks[i]; });
+// Build keys
+const krow=document.getElementById('krow'), kbhints=document.getElementById('kbhints');
+KEYS.forEach(k=>{
+  const el=document.createElement('div');
+  el.className=`pkey ${k.t}`; el.dataset.n=k.n; el.dataset.lbl=k.lbl; el.dataset.freq=k.freq; el.dataset.c=k.c;
+  el.textContent=k.lbl; krow.appendChild(el);
+  const h=document.createElement('div');
+  h.className=`kbh${k.t==='black'?' bh':''}`; h.textContent=KBL[k.n]||''; kbhints.appendChild(h);
+  el.addEventListener('mousedown',()=>playKey(el));
+  el.addEventListener('mouseup',()=>releaseKey(k.n));
+  el.addEventListener('mouseleave',()=>releaseKey(k.n));
+  el.addEventListener('touchstart',e=>{e.preventDefault();playKey(el)},{passive:false});
+  el.addEventListener('touchend',()=>releaseKey(k.n));
 });
 
-let barP=0;
-const barT=setInterval(()=>{barP=Math.min(barP+Math.random()*9,90);lb.style.width=barP+'%';},160);
+// Build visualizer bars
+const vizEl=document.getElementById('viz');
+for(let i=0;i<32;i++){const b=document.createElement('div');b.className='vb';vizEl.appendChild(b);}
+const vbars=[...vizEl.querySelectorAll('.vb')];
 
-navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720}})
-  .then(s=>{
-    video.srcObject=s;
-    video.onloadedmetadata=()=>{
-      video.play();
-      new Camera(video,{onFrame:async()=>{await hModel.send({image:video});},width:1280,height:720}).start();
-      clearInterval(barT); lb.style.width='100%';
-      setTimeout(()=>loadEl.style.display='none',400);
-      statusEl.textContent='SHOW BOTH HANDS';
-    };
-  })
-  .catch(e=>{clearInterval(barT);loadEl.innerHTML=`<span style="color:#ff4444;letter-spacing:2px">CAMERA DENIED<br><small style="opacity:.5">${e.message}</small></span>`;});
+// ── AUDIO ─────────────────────────────────────────────────────
+let ac=null;
+const aosc={};
+function getAC(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();return ac;}
 
-// ══════════════════════════════════════
-// MATH
-// ══════════════════════════════════════
-const lerp=(a,b,t)=>a+(b-a)*t;
-const dist=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return Math.sqrt(dx*dx+dy*dy);};
-const px=lm=>({x:(1-lm.x)*W,y:lm.y*H});
-function ha(hex,a){return hex+Math.round(Math.max(0,Math.min(1,a))*255).toString(16).padStart(2,'0');}
-
-// Spring physics — smooth elastic
-const SPRING_K=0.28, SPRING_D=0.72;
-function springStep(cur,vel,target){
-  const f=(target-cur)*SPRING_K;
-  vel=(vel+f)*SPRING_D;
-  return {v:vel,p:cur+vel};
+function playKey(el){
+  const n=el.dataset.n, freq=+el.dataset.freq, color=el.dataset.c, lbl=el.dataset.lbl;
+  if(aosc[n])return;
+  const a=getAC(), now=a.currentTime;
+  const o1=a.createOscillator(), o2=a.createOscillator(), o3=a.createOscillator();
+  const g1=a.createGain(), g2=a.createGain(), g3=a.createGain(), gm=a.createGain();
+  const comp=a.createDynamicsCompressor();
+  comp.threshold.value=-18; comp.ratio.value=4;
+  o1.type='sine';     o1.frequency.value=freq;
+  o2.type='triangle'; o2.frequency.value=freq*2;
+  o3.type='sine';     o3.frequency.value=freq*.5;
+  g1.gain.setValueAtTime(0,now); g1.gain.linearRampToValueAtTime(.3,now+.025); g1.gain.exponentialRampToValueAtTime(.2,now+.35);
+  g2.gain.setValueAtTime(.07,now); g2.gain.exponentialRampToValueAtTime(.01,now+.4);
+  g3.gain.setValueAtTime(.04,now);
+  gm.gain.value=.85;
+  o1.connect(g1);g1.connect(gm); o2.connect(g2);g2.connect(gm); o3.connect(g3);g3.connect(gm);
+  gm.connect(comp);comp.connect(a.destination);
+  o1.start(now);o2.start(now);o3.start(now);
+  aosc[n]={o1,o2,o3,g1,g2,g3,gm};
+  el.classList.add('act');
+  // FX
+  const pr=document.getElementById('ppanel').getBoundingClientRect();
+  spawnRipple(W*.5,H*.42,color,6); spawnRipple(W*.5,H*.42,color+'80',10);
+  spawnParticles(W*.5,pr.top-10,color);
+  // Note display
+  const nn=document.getElementById('nname'), nf=document.getElementById('nfreq');
+  nn.textContent=lbl; nn.style.color=color; nn.style.textShadow=`0 0 40px ${color}80`;
+  nf.textContent=freq.toFixed(2)+' Hz'; nf.style.color=color;
+  nn.classList.add('show'); nf.classList.add('show');
+  if(!startTime)startTime=Date.now();
+  noteCount++; document.getElementById('mnotes').textContent=noteCount;
+  vizEl.classList.add('on'); animViz(color);
 }
 
-// ══════════════════════════════════════
-// NEBULA BACKGROUND
-// ══════════════════════════════════════
-function drawNebulae(t){
-  nebulae.forEach(n=>{
-    const ox=Math.sin(t*n.spd+n.phase)*60;
-    const oy=Math.cos(t*n.spd*0.7+n.phase)*40;
-    const nx=(n.x+ox+W)%W, ny=(n.y+oy+H)%H;
-    const g=ctx.createRadialGradient(nx,ny,0,nx,ny,n.r);
-    g.addColorStop(0,ha(n.color,0.045));
-    g.addColorStop(0.5,ha(n.color,0.02));
-    g.addColorStop(1,ha(n.color,0));
-    ctx.save();ctx.fillStyle=g;
-    ctx.beginPath();ctx.ellipse(nx,ny,n.r,n.r*.55,t*n.spd*.3,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+function releaseKey(n){
+  const o=aosc[n]; if(!o)return;
+  const a=getAC(), now=a.currentTime;
+  [o.g1,o.g2,o.g3,o.gm].forEach(g=>{g.gain.setValueAtTime(g.gain.value,now);g.gain.exponentialRampToValueAtTime(.001,now+.35);});
+  setTimeout(()=>{try{o.o1.stop();o.o2.stop();o.o3.stop();}catch(_){}},400);
+  delete aosc[n];
+  const el=document.querySelector(`.pkey[data-n="${n}"]`);
+  if(el)el.classList.remove('act','primed');
+  if(!Object.keys(aosc).length){
+    document.getElementById('nname').classList.remove('show');
+    document.getElementById('nfreq').classList.remove('show');
+    vizEl.classList.remove('on');
+    vbars.forEach(b=>b.style.height='2px');
+  }
+}
+
+let vizRaf=null;
+function animViz(color){
+  if(vizRaf)cancelAnimationFrame(vizRaf);
+  vbars.forEach(b=>{b.style.background=color;b.style.boxShadow=`0 0 6px ${color}80`;});
+  function tick(){
+    if(!Object.keys(aosc).length)return;
+    vbars.forEach((b,i)=>{const h=2+Math.abs(Math.sin(Date.now()*.004+i*.6+Math.random()*.2))*52;b.style.height=h+'px';});
+    vizRaf=requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ── PARTICLES & RIPPLES ───────────────────────────────────────
+const ripples=[], particles=[];
+function spawnRipple(x,y,color,speed){ripples.push({x,y,r:0,a:.7,color,speed});}
+function spawnParticles(x,y,color){
+  for(let i=0;i<12;i++){
+    const a=Math.random()*Math.PI*2, s=1.5+Math.random()*4;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2.5,a:.85,color,r:1.5+Math.random()*3});
+  }
+}
+
+// ── MEDIAPIPE ─────────────────────────────────────────────────
+const activeHands={};
+const trails={L:[],R:[]};
+const TL=26;
+
+function tryLoadMediaPipe(){
+  if(typeof Hands==='undefined'){
+    // MediaPipe not loaded yet, try again
+    setTimeout(tryLoadMediaPipe,500); return;
+  }
+  const htracker=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+  htracker.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:.7,minTrackingConfidence:.5});
+  htracker.onResults(r=>{
+    for(const k of Object.keys(activeHands))delete activeHands[k];
+    if(r.multiHandLandmarks&&r.multiHandedness)
+      r.multiHandedness.forEach((h,i)=>{activeHands[h.label]=r.multiHandLandmarks[i];});
+    anyHand=Object.keys(activeHands).length>0;
+    refreshStatus();
   });
-}
 
-// ══════════════════════════════════════
-// STAR FIELD (static, drawn once to offscreen)
-// ══════════════════════════════════════
-let starCanvas=null;
-function buildStars(){
-  starCanvas=document.createElement('canvas');
-  starCanvas.width=W; starCanvas.height=H;
-  const sc=starCanvas.getContext('2d');
-  for(let i=0;i<120;i++){
-    const x=Math.random()*W, y=Math.random()*H;
-    const r=Math.random()*1.2;
-    const a=0.15+Math.random()*0.5;
-    sc.fillStyle=`rgba(255,255,255,${a})`;
-    sc.beginPath();sc.arc(x,y,r,0,Math.PI*2);sc.fill();
-  }
-}
+  const video=document.createElement('video');
+  video.autoplay=true;video.muted=true;video.playsInline=true;
+  video.style.cssText='position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;';
+  document.body.appendChild(video);
 
-// ══════════════════════════════════════
-// DRAW DOT — multi-ring glow
-// ══════════════════════════════════════
-function drawDot(x,y,color,r,bright=1){
-  ctx.save();
-  // Soft outer halo
-  const g=ctx.createRadialGradient(x,y,0,x,y,r*5);
-  g.addColorStop(0,ha(color,0.22*bright));
-  g.addColorStop(0.4,ha(color,0.08*bright));
-  g.addColorStop(1,ha(color,0));
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*5,0,Math.PI*2);ctx.fill();
-  // Mid ring
-  ctx.shadowColor=color;ctx.shadowBlur=16*bright;
-  ctx.strokeStyle=ha(color,0.6*bright);ctx.lineWidth=0.8;
-  ctx.beginPath();ctx.arc(x,y,r*1.8,0,Math.PI*2);ctx.stroke();
-  // Core
-  ctx.shadowBlur=10*bright;ctx.fillStyle=color;
-  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
-  // Nucleus
-  ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,0.9)';
-  ctx.beginPath();ctx.arc(x,y,r*.32,0,Math.PI*2);ctx.fill();
-  ctx.restore();
-}
+  document.getElementById('cambtxt').textContent=T[lang].camLoad;
 
-// ══════════════════════════════════════
-// THIN LASER STRING — 4 passes
-// ══════════════════════════════════════
-function drawString(x1,y1,x2,y2,cCore,cGlow,alpha,mx,my){
-  if(alpha<0.02)return;
-  ctx.save();
-
-  // Pass 1 — ultra-soft wide bloom
-  const g1=ctx.createLinearGradient(x1,y1,x2,y2);
-  g1.addColorStop(0,ha(cGlow,alpha*0.12));
-  g1.addColorStop(.5,ha(cCore,alpha*0.18));
-  g1.addColorStop(1,ha(cGlow,alpha*0.12));
-  ctx.strokeStyle=g1;ctx.lineWidth=9;ctx.lineCap='round';
-  ctx.shadowColor=cGlow;ctx.shadowBlur=28;ctx.globalAlpha=1;
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);ctx.stroke();
-
-  // Pass 2 — medium glow
-  const g2=ctx.createLinearGradient(x1,y1,x2,y2);
-  g2.addColorStop(0,ha(cGlow,alpha*.55));
-  g2.addColorStop(.5,ha(cCore,alpha*.7));
-  g2.addColorStop(1,ha(cGlow,alpha*.55));
-  ctx.strokeStyle=g2;ctx.lineWidth=2.2;
-  ctx.shadowColor=cCore;ctx.shadowBlur=12;
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);ctx.stroke();
-
-  // Pass 3 — thin bright core
-  const g3=ctx.createLinearGradient(x1,y1,x2,y2);
-  g3.addColorStop(0,ha(cCore,alpha*.9));
-  g3.addColorStop(.5,'#ffffff');
-  g3.addColorStop(1,ha(cCore,alpha*.9));
-  ctx.strokeStyle=g3;ctx.lineWidth=0.7;
-  ctx.shadowColor='#fff';ctx.shadowBlur=6;
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);ctx.stroke();
-
-  // Pass 4 — tiny dashes of energy (shimmer)
-  const segs=14;
-  for(let s=0;s<segs;s++){
-    if(Math.random()>0.35)continue;
-    const t0=s/segs, t1=(s+0.5)/segs;
-    const bx0=qbez(x1,mx,x2,t0),by0=qbez(y1,my,y2,t0);
-    const bx1=qbez(x1,mx,x2,t1),by1=qbez(y1,my,y2,t1);
-    ctx.strokeStyle=ha('#ffffff',alpha*0.35*Math.random());
-    ctx.lineWidth=0.4;ctx.shadowBlur=0;
-    ctx.beginPath();ctx.moveTo(bx0,by0);ctx.lineTo(bx1,by1);ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function qbez(a,b,c,t){return (1-t)*(1-t)*a+2*(1-t)*t*b+t*t*c;}
-
-// ══════════════════════════════════════
-// SKELETON EDGE
-// ══════════════════════════════════════
-function drawEdge(pa,pb,color){
-  ctx.save();
-  ctx.shadowColor=color;ctx.shadowBlur=6;
-  ctx.strokeStyle=ha(color,0.35);ctx.lineWidth=0.9;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();
-  ctx.restore();
-}
-
-// ══════════════════════════════════════
-// TRAIL
-// ══════════════════════════════════════
-function pushTrail(key,fi,x,y){
-  const t=trails[key][fi];
-  t.push({x,y});
-  if(t.length>TRAIL_LEN)t.shift();
-}
-function drawTrail(trail,color){
-  if(trail.length<3)return;
-  ctx.save();
-  for(let i=1;i<trail.length;i++){
-    const a=trail[i-1],b=trail[i];
-    const p=i/trail.length;
-    ctx.shadowColor=color;ctx.shadowBlur=8;
-    ctx.strokeStyle=ha(color,p*0.55);ctx.lineWidth=p*2.5;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-  }
-  ctx.restore();
-}
-
-// ══════════════════════════════════════
-// PARTICLES
-// ══════════════════════════════════════
-function burst(x,y,cA,cB,n=30){
-  for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2, sp=2+Math.random()*6;
-    particles.push({
-      x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,
-      life:1,decay:0.018+Math.random()*0.03,
-      r:1.5+Math.random()*3.5,
-      color:Math.random()<.5?cA:cB,
-      spark:Math.random()<.25,glow:12+Math.random()*12
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:1280,height:720}})
+    .then(s=>{
+      video.srcObject=s;
+      video.onloadedmetadata=()=>{
+        video.play();
+        new Camera(video,{onFrame:async()=>{await htracker.send({image:video});},width:1280,height:720}).start();
+        cameraOk=true;
+        document.getElementById('cambdot').className='sdot green';
+        document.getElementById('cambtxt').textContent=T[lang].camOk;
+        refreshStatus();
+      };
+    })
+    .catch(()=>{
+      document.getElementById('cambtxt').textContent=T[lang].camFail;
+      refreshStatus();
     });
-  }
 }
-function spawnRing(x,y,c){rings.push({x,y,r:0,maxR:100,color:c,a:0.85});}
+tryLoadMediaPipe();
 
-function tickParticles(){
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];
-    p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.vx*=0.97;p.life-=p.decay;
-    if(p.life<=0){particles.splice(i,1);continue;}
-    ctx.save();ctx.globalAlpha=p.life;
-    ctx.shadowColor=p.color;ctx.shadowBlur=p.glow;
-    ctx.fillStyle=p.spark?'#fff':p.color;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  }
-}
-function tickRings(){
-  for(let i=rings.length-1;i>=0;i--){
-    const r=rings[i];r.r+=5;r.a-=0.038;
-    if(r.a<=0){rings.splice(i,1);continue;}
-    ctx.save();ctx.globalAlpha=r.a;
-    ctx.shadowColor=r.color;ctx.shadowBlur=20;
-    ctx.strokeStyle=r.color;ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();
-    ctx.restore();
-  }
-}
+// ── HAND DRAWING ──────────────────────────────────────────────
+const CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function lm(lms,i){return{x:(1-lms[i].x)*W,y:lms[i].y*H};}
 
-// ══════════════════════════════════════
-// TOUCH
-// ══════════════════════════════════════
-function checkTouch(lx,ly,rx,ry,fi,now){
-  if(dist(lx,ly,rx,ry)<TOUCH_PX&&now-lastTouch[fi]>TOUCH_CD){
-    lastTouch[fi]=now;
-    const mx=(lx+rx)/2,my=(ly+ry)/2;
-    const [cA,cB]=F_COLORS[fi];
-    burst(mx,my,cA,cB,35);
-    spawnRing(mx,my,cA);spawnRing(mx,my,cB);
-  }
-}
-
-// ══════════════════════════════════════
-// HAND
-// ══════════════════════════════════════
-function drawHand(lms,base,key){
-  EDGES.forEach(([a,b])=>drawEdge(px(lms[a]),px(lms[b]),base));
-  lms.forEach((lm,i)=>{
-    const p=px(lm);
-    const fi=TIP_IDS.indexOf(i);
-    const tip=fi!==-1;
-    const col=JOINT_PAL[i%JOINT_PAL.length];
-    if(tip){pushTrail(key,fi,p.x,p.y);drawTrail(trails[key][fi],col);}
-    drawDot(p.x,p.y,col,tip?JOINT_R*1.9:JOINT_R*0.75,tip?1.3:.7);
+function drawSkeleton(lms,col){
+  hx.save();
+  CONN.forEach(([a,b])=>{
+    const pa=lm(lms,a),pb=lm(lms,b);
+    hx.strokeStyle=col+'40';hx.lineWidth=1.5;hx.lineCap='round';
+    hx.beginPath();hx.moveTo(pa.x,pa.y);hx.lineTo(pb.x,pb.y);hx.stroke();
   });
+  [0,4,8,12,16,20].forEach(i=>{
+    const p=lm(lms,i),isIdx=i===8,isTip=[4,8,12,16,20].includes(i);
+    hx.beginPath();hx.arc(p.x,p.y,isIdx?7:isTip?4:3,0,Math.PI*2);
+    hx.fillStyle=isIdx?col:isTip?col+'80':'#ffffff28';
+    hx.shadowColor=isIdx?col:'transparent';hx.shadowBlur=isIdx?18:0;
+    hx.fill();hx.shadowBlur=0;
+  });
+  hx.restore();
 }
 
-// ══════════════════════════════════════
-// MAIN LOOP
-// ══════════════════════════════════════
-buildStars();
+function drawTrail(tr,col){
+  if(tr.length<2)return;
+  hx.save();
+  for(let i=1;i<tr.length;i++){
+    const t=i/tr.length;
+    hx.strokeStyle=col+Math.round(t*160).toString(16).padStart(2,'0');
+    hx.lineWidth=t*5;hx.lineCap='round';
+    hx.beginPath();hx.moveTo(tr[i-1].x,tr[i-1].y);hx.lineTo(tr[i].x,tr[i].y);hx.stroke();
+  }
+  hx.restore();
+}
 
-function draw(){
-  requestAnimationFrame(draw);
-  const now=performance.now();
+function drawBeam(fx,fy,ptop,col){
+  if(fy>=ptop)return;
+  const g=hx.createLinearGradient(fx,fy,fx,ptop);
+  g.addColorStop(0,col+'00');g.addColorStop(1,col+'aa');
+  hx.save();hx.strokeStyle=g;hx.lineWidth=1.5;
+  hx.setLineDash([5,7]);hx.lineDashOffset=-performance.now()*.04;
+  hx.beginPath();hx.moveTo(fx,fy);hx.lineTo(fx,ptop);hx.stroke();
+  hx.setLineDash([]);hx.restore();
+}
 
-  // FPS
-  fpsF++;
-  if(now-fpsT>900){fpsEl.textContent=Math.round(fpsF/(now-fpsT)*1000)+' FPS';fpsF=0;fpsT=now;}
+// ── PIANO HIT DETECTION ───────────────────────────────────────
+function pianoTop(){return document.getElementById('ppanel').getBoundingClientRect().top;}
+function keyAtX(x){
+  const blacks=[...document.querySelectorAll('.pkey.black')];
+  const whites=[...document.querySelectorAll('.pkey.white')];
+  for(const k of [...blacks,...whites]){const r=k.getBoundingClientRect();if(x>=r.left&&x<=r.right)return k;}
+  return null;
+}
+function inZone(fx,fy){
+  const pt=pianoTop();
+  const rc=document.getElementById('krow').getBoundingClientRect();
+  return fy>=pt-90&&fy<=pt+60&&fx>=rc.left&&fx<=rc.right;
+}
 
-  // BG fade — deep midnight
-  ctx.fillStyle='rgba(1,3,16,0.5)';ctx.fillRect(0,0,W,H);
-
+// ── MAIN LOOP ─────────────────────────────────────────────────
+function loop(){
+  requestAnimationFrame(loop);
+  // Background
+  bgx.fillStyle='rgba(4,3,13,.46)';bgx.fillRect(0,0,W,H);
   // Stars
-  if(starCanvas)ctx.drawImage(starCanvas,0,0);
+  stars.forEach(s=>{s.t+=s.s;bgx.fillStyle=`rgba(255,255,255,${s.a*(0.4+0.6*Math.sin(s.t))})`;bgx.beginPath();bgx.arc(s.x,s.y,s.r,0,Math.PI*2);bgx.fill();});
+  // Ripples
+  for(let i=ripples.length-1;i>=0;i--){const r=ripples[i];r.r+=r.speed;r.a-=.02;if(r.a<=0){ripples.splice(i,1);continue;}bgx.save();bgx.globalAlpha=r.a;bgx.strokeStyle=r.color;bgx.lineWidth=1.5;bgx.beginPath();bgx.arc(r.x,r.y,r.r,0,Math.PI*2);bgx.stroke();bgx.restore();}
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.a-=.025;if(p.a<=0){particles.splice(i,1);continue;}bgx.save();bgx.globalAlpha=p.a;bgx.fillStyle=p.color;bgx.shadowColor=p.color;bgx.shadowBlur=8;bgx.beginPath();bgx.arc(p.x,p.y,p.r,0,Math.PI*2);bgx.fill();bgx.restore();}
 
-  // Nebula
-  drawNebulae(now);
+  // Hand tracking
+  hx.clearRect(0,0,W,H);
+  document.querySelectorAll('.pkey.primed').forEach(k=>k.classList.remove('primed'));
+  const playing=new Set();
+  const pt=pianoTop();
 
-  const L=hData['Right'], R=hData['Left'];
-  const hasL=!!L, hasR=!!R;
-
-  if(hasL) drawHand(L,'#00f5ff','L');
-  if(hasR) drawHand(R,'#ff00e5','R');
-
-  if(hasL&&hasR){
-    statusEl.textContent='✦  S T R I N G S  A C T I V E  ✦';
-
-    TIP_IDS.forEach((tid,fi)=>{
-      const lp=px(L[tid]), rp=px(R[tid]);
-      const sp=springs[fi];
-
-      // Spring init
-      if(!sp.init){sp.lx=lp.x;sp.ly=lp.y;sp.rx=rp.x;sp.ry=rp.y;sp.init=true;}
-
-      // Spring step for both endpoints
-      let sl=springStep(sp.lx,sp.lvx,lp.x); sp.lx=sl.p;sp.lvx=sl.v;
-      let sl2=springStep(sp.ly,sp.lvy,lp.y); sp.ly=sl2.p;sp.lvy=sl2.v;
-      let sr=springStep(sp.rx,sp.rvx,rp.x); sp.rx=sr.p;sp.rvx=sr.v;
-      let sr2=springStep(sp.ry,sp.rvy,rp.y); sp.ry=sr2.p;sp.rvy=sr2.v;
-
-      const dx=sp.lx-sp.rx, dy=sp.ly-sp.ry;
-      const d=Math.sqrt(dx*dx+dy*dy)||1;
-      const norm=Math.min(d/MAX_DIST,1);
-      const alpha=lerp(1,0.12,norm);
-      const [cCore,cGlow]=F_COLORS[fi];
-
-      // Multiple sag oscillations layered
-      const sag1=d*0.07*Math.sin(now*0.00085+fi*1.4);
-      const sag2=d*0.025*Math.sin(now*0.0022+fi*0.9+1);
-      const sag=sag1+sag2;
-      const inv=1/d;
-      const mx=(sp.lx+sp.rx)/2+dy*inv*sag;
-      const my=(sp.ly+sp.ry)/2-dx*inv*sag;
-
-      drawString(sp.lx,sp.ly,sp.rx,sp.ry,cCore,cGlow,alpha,mx,my);
-
-      // Midpoint jewel
-      const jx=qbez(sp.lx,mx,sp.rx,.5), jy=qbez(sp.ly,my,sp.ry,.5);
-      if(alpha>0.3) drawDot(jx,jy,cCore,2.5*alpha,1.3);
-
-      // Quarter-point jewels (subtle)
-      if(alpha>0.6){
-        const q1x=qbez(sp.lx,mx,sp.rx,.25),q1y=qbez(sp.ly,my,sp.ry,.25);
-        const q2x=qbez(sp.lx,mx,sp.rx,.75),q2y=qbez(sp.ly,my,sp.ry,.75);
-        drawDot(q1x,q1y,cGlow,1.5,0.7);
-        drawDot(q2x,q2y,cGlow,1.5,0.7);
+  function handleHand(lms,col,trail){
+    if(!lms)return;
+    const tip=lm(lms,8);
+    trail.push({x:tip.x,y:tip.y});
+    if(trail.length>TL)trail.shift();
+    drawTrail(trail,col);
+    drawSkeleton(lms,col);
+    const over=inZone(tip.x,tip.y);
+    if(over){
+      drawBeam(hx,tip.x,tip.y,pt,col);
+      const key=keyAtX(tip.x);
+      if(key){
+        key.classList.add('primed');
+        const n=key.dataset.n;
+        playing.add(n);
+        if(!aosc[n]){playKey(key);spawnRipple(tip.x,pt-10,key.dataset.c,4);}
       }
-
-      checkTouch(sp.lx,sp.ly,sp.rx,sp.ry,fi,now);
-    });
-
-    // Cross-weave: connect each left fingertip to the NEXT right fingertip
-    TIP_IDS.forEach((tid,fi)=>{
-      const next=(fi+1)%5;
-      const lp=px(L[tid]), rp=px(R[TIP_IDS[next]]);
-      const d=dist(lp.x,lp.y,rp.x,rp.y);
-      if(d>MAX_DIST*0.85)return;
-      const norm=d/MAX_DIST;
-      const alpha=lerp(0.28,0,norm);
-      const [cA]=F_COLORS[fi],[cB]=F_COLORS[next];
-      const mx2=(lp.x+rp.x)/2, my2=(lp.y+rp.y)/2;
-      drawString(lp.x,lp.y,rp.x,rp.y,cA,cB,alpha*0.55,mx2,my2);
-    });
-
-  } else {
-    springs.forEach(s=>s.init=false);
-    if(!hasL)trails.L.forEach(t=>t.length=0);
-    if(!hasR)trails.R.forEach(t=>t.length=0);
-    statusEl.textContent=hasL||hasR?'SHOW SECOND HAND…':'SHOW BOTH HANDS';
+    }
+    // Finger ring
+    hx.save();hx.strokeStyle=col;hx.lineWidth=2;
+    hx.shadowColor=col;hx.shadowBlur=over?24:10;hx.globalAlpha=over?1:.6;
+    hx.beginPath();hx.arc(tip.x,tip.y,over?14:9,0,Math.PI*2);hx.stroke();
+    if(over){hx.globalAlpha=.15;hx.fillStyle=col;hx.beginPath();hx.arc(tip.x,tip.y,14,0,Math.PI*2);hx.fill();}
+    hx.restore();
   }
 
-  tickRings();
-  tickParticles();
-}
+  handleHand(activeHands['Right'],'#ff6ac0',trails.L);
+  handleHand(activeHands['Left'], '#6ab0ff',trails.R);
+  if(!activeHands['Right'])trails.L.length=0;
+  if(!activeHands['Left']) trails.R.length=0;
 
-draw();
+  // Release keys no longer played by hand
+  Object.keys(aosc).forEach(n=>{
+    if(Object.keys(activeHands).length&&!playing.has(n)&&!heldKeys.has(n))releaseKey(n);
+  });
+
+  // Timer
+  if(startTime){
+    const e=Math.floor((Date.now()-startTime)/1e3);
+    document.getElementById('mtime').textContent=`${Math.floor(e/60)}:${(e%60).toString().padStart(2,'0')}`;
+  }
+}
+loop();
+
+// ── KEYBOARD ─────────────────────────────────────────────────
+const heldKeys=new Set();
+document.addEventListener('keydown',ev=>{
+  if(ev.repeat)return;
+  const n=KB[ev.key.toLowerCase()];
+  if(!n||heldKeys.has(n))return;
+  heldKeys.add(n);
+  const el=document.querySelector(`.pkey[data-n="${n}"]`);
+  if(el)playKey(el);
+});
+document.addEventListener('keyup',ev=>{
+  const n=KB[ev.key.toLowerCase()];
+  if(!n)return; heldKeys.delete(n); releaseKey(n);
+});
 </script>
 </body>
 </html>
